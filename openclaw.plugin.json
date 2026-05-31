@@ -1,0 +1,27 @@
+{
+  "id": "openclaw-filebrowser",
+  "name": "OpenClaw File Browser",
+  "description": "Read-only file browser plugin scaffold for the OpenClaw Gateway dashboard.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "roots": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "maxTextBytes": {
+        "type": "integer",
+        "minimum": 1
+      }
+    }
+  },
+  "activation": {
+    "onStartup": true
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@klausclaw18/openclaw-filebrowser",
+  "version": "0.0.1",
+  "description": "OpenClaw-native read-only file browser plugin scaffold.",
+  "type": "module",
+  "dependencies": {
+    "typebox": "1.1.38"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.5.27"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.5.27"
+    },
+    "runtimeExtensions": [
+      "./index.js"
+    ]
+  },
+  "files": [
+    "index.js",
+    "gateway-paths.js",
+    "openclaw.plugin.json",
+    "README.md",
+    "STATUS.md",
+    "docs/**",
+    "scripts/**"
+  ]
+}
