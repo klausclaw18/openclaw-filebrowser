@@ -1,7 +1,24 @@
 {
   "name": "@klausclaw18/openclaw-filebrowser",
-  "version": "0.0.1",
-  "description": "OpenClaw-native read-only file browser plugin scaffold.",
+  "version": "1.0.0",
+  "description": "Read-only file browser plugin for OpenClaw Gateway.",
+  "license": "MIT",
+  "author": "klausclaw18",
+  "homepage": "https://github.com/klausclaw18/openclaw-filebrowser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klausclaw18/openclaw-filebrowser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/klausclaw18/openclaw-filebrowser/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "gateway",
+    "file-browser",
+    "read-only"
+  ],
   "type": "module",
   "dependencies": {
     "typebox": "1.1.38"
@@ -30,6 +47,8 @@
     "gateway-paths.js",
     "openclaw.plugin.json",
     "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
     "STATUS.md",
     "docs/**",
     "scripts/**"
