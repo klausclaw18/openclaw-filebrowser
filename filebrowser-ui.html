@@ -1,616 +1,1090 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenClaw File Browser</title>
-    <style>
-      :root {
-        --bg: #18181b;
-        --bg-alt: #1f1f23;
-        --bg-hover: #27272a;
-        --border: #27272a;
-        --text: #e4e4e7;
-        --text-muted: #a1a1aa;
-        --text-dim: #71717a;
-        --accent: #a855f7;
-        --accent-dim: #7c3aed;
-        --danger: #ef4444;
-        --success: #22c55e;
-        --warning: #eab308;
-        --radius: 8px;
-        --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenClaw File Browser</title>
+  <style>
+    :root {
+      --bg: #0e1015;
+      --bg-elevated: #191c24;
+      --bg-hover: #1f2330;
+      --bg-muted: #1f2330;
+      --card: #161920;
+      --panel: #0e1015;
+      --panel-strong: #191c24;
+      --chrome: #0e1015f5;
+      --accent: #ff5c5c;
+      --accent-hover: #ff7070;
+      --accent-subtle: #ff5c5c1a;
+      --accent-muted: #ff5c5c;
+      --text: #d4d4d8;
+      --text-strong: #f4f4f5;
+      --muted: #838387;
+      --muted-strong: #75757d;
+      --border: #1e2028;
+      --border-strong: #2e3040;
+      --border-hover: #3e4050;
+      --input: #1e2028;
+      --danger: #ef4444;
+      --danger-subtle: #ef444414;
+      --ok: #22c55e;
+      --ok-subtle: #22c55e14;
+      --warn: #f59e0b;
+      --warn-subtle: #f59e0b14;
+      --info: #3b82f6;
+      --info-subtle: #3b82f614;
+      --focus-ring: 0 0 0 2px var(--bg), 0 0 0 3px color-mix(in srgb, var(--accent) 70%, transparent);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+      --radius: 10px;
+      --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+      --ease-out: cubic-bezier(.16, 1, .3, 1);
+      --duration-fast: .1s;
+      --duration-normal: .18s;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.55;
+      letter-spacing: -0.01em;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* OpClaw shell bar at top */
+    .oc-shell {
+      display: flex;
+      align-items: center;
+      min-height: 52px;
+      padding: 0 16px;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+      -webkit-backdrop-filter: blur(12px) saturate(1.6);
+      backdrop-filter: blur(12px) saturate(1.6);
+      flex-shrink: 0;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .oc-shell__nav-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .oc-shell__breadcrumb {
+      color: var(--text);
+      font-weight: 650;
+      font-size: 13px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .oc-shell__breadcrumb a {
+      color: var(--text);
+      text-decoration: none;
+      transition: color var(--duration-fast) ease;
+    }
+
+    .oc-shell__breadcrumb a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .oc-shell__breadcrumb-sep {
+      color: var(--muted);
+      margin: 0 4px;
+      opacity: 0.6;
+    }
+
+    .oc-shell__breadcrumb-last {
+      color: var(--accent);
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    /* Sidebar navigation */
+    .oc-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .oc-sidebar {
+      width: 258px;
+      min-width: 258px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 12px 0;
+    }
+
+    .oc-sidebar__section {
+      padding: 4px 12px;
+    }
+
+    .oc-sidebar__section-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 8px 12px 4px;
+    }
+
+    .oc-sidebar__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      margin: 0 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+      text-decoration: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .oc-sidebar__item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .oc-sidebar__item--active {
+      color: var(--accent);
+      background: var(--accent-subtle);
+      font-weight: 600;
+    }
+
+    .oc-sidebar__item--active:hover {
+      background: var(--accent-subtle);
+      color: var(--accent);
+    }
+
+    .oc-sidebar__item-icon {
+      flex-shrink: 0;
+      width: 20px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .oc-sidebar__item-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .oc-sidebar__spacer {
+      flex: 1;
+    }
+
+    .oc-sidebar__footer {
+      border-top: 1px solid var(--border);
+      padding: 8px;
+      margin-top: auto;
+    }
+
+    .oc-sidebar__footer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+    }
+
+    .oc-sidebar__footer-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .oc-sidebar__footer-item svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Content area */
+    .oc-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .oc-content__toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .oc-content__toolbar-title {
+      font-weight: 650;
+      font-size: 14px;
+      color: var(--text-strong);
+      margin-right: auto;
+    }
+
+    .oc-content__toolbar-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .oc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      letter-spacing: -0.01em;
+      transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) ease;
+      -webkit-user-select: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .oc-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-strong);
+      color: var(--text-strong);
+    }
+
+    .oc-btn:active {
+      transform: scale(0.97);
+    }
+
+    .oc-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .oc-btn--primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fafafa;
+      font-weight: 600;
+    }
+
+    .oc-btn--primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+
+    .oc-btn--icon {
+      padding: 6px 10px;
+      min-width: 34px;
+      justify-content: center;
+    }
+
+    /* Root selector */
+    .oc-root-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+    }
+
+    .oc-root-selector label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .oc-select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      min-width: 160px;
+      max-width: 100%;
+      transition: border-color var(--duration-fast) ease;
+    }
+
+    .oc-select:focus {
+      border-color: var(--border-strong);
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    /* Breadcrumb row */
+    .oc-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      flex-shrink: 0;
+      min-width: 0;
+      overflow-x: auto;
+    }
+
+    .oc-breadcrumb a {
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .oc-breadcrumb a:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .oc-breadcrumb span.oc-breadcrumb-sep {
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    .oc-breadcrumb .oc-breadcrumb-current {
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* Main content / table area */
+    .oc-main {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .oc-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .oc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .oc-table th {
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      border-bottom: 2px solid var(--border);
+      padding: 8px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      z-index: 2;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .oc-table th.sortable {
+      cursor: pointer;
+      transition: color var(--duration-fast) ease;
+    }
+
+    .oc-table th.sortable:hover {
+      color: var(--text);
+    }
+
+    .oc-table td {
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .oc-table tbody tr {
+      transition: background var(--duration-fast) ease;
+    }
+
+    .oc-table tbody tr:hover {
+      background: var(--bg-hover);
+    }
+
+    .oc-table .col-name {
+      cursor: pointer;
+    }
+
+    .oc-table .col-icon {
+      width: 24px;
+      text-align: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .oc-table .col-dir {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .oc-table .col-size {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: nowrap;
+      width: 100px;
+    }
+
+    .oc-table .col-type {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      width: 100px;
+    }
+
+    .oc-table .col-perm {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      white-space: nowrap;
+      width: 110px;
+    }
+
+    /* File viewer */
+    .oc-viewer-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      font-size: 13px;
+    }
+
+    .oc-viewer-header .oc-viewer-back {
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 500;
+      transition: color var(--duration-fast) ease;
+    }
+
+    .oc-viewer-header .oc-viewer-back:hover {
+      color: var(--accent-hover);
+    }
+
+    .oc-viewer-header .oc-viewer-filename {
+      color: var(--text-strong);
+      font-weight: 600;
+      font-size: 13px;
+      font-family: var(--mono);
+    }
+
+    .oc-viewer-header .oc-viewer-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: auto;
+    }
+
+    .oc-viewer {
+      flex: 1;
+      overflow: auto;
+      padding: 0;
+    }
+
+    .oc-viewer pre {
+      margin: 0;
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre;
+      counter-reset: line;
+    }
+
+    .oc-viewer pre code {
+      display: block;
+      color: var(--text);
+    }
+
+    .oc-viewer pre .line::before {
+      counter-increment: line;
+      content: counter(line);
+      display: inline-block;
+      width: 3rem;
+      text-align: right;
+      margin-right: 1rem;
+      color: var(--muted);
+      opacity: 0.5;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Status bar */
+    .oc-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .oc-status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .oc-status-dot--ok {
+      background: var(--ok);
+      box-shadow: 0 0 6px var(--ok);
+    }
+
+    .oc-status-dot--err {
+      background: var(--danger);
+      box-shadow: 0 0 6px var(--danger);
+    }
+
+    .oc-status-dot--warn {
+      background: var(--warn);
+      box-shadow: 0 0 6px var(--warn);
+    }
+
+    /* Placeholder */
+    .oc-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60%;
+      color: var(--muted);
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    .oc-placeholder-icon {
+      font-size: 36px;
+      opacity: 0.25;
+    }
+
+    /* Toast notification */
+    .oc-toast {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--text);
+      z-index: 100;
+      box-shadow: 0 4px 16px #0000004d;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: oc-toast-in 0.2s var(--ease-out) forwards;
+    }
+
+    @keyframes oc-toast-in {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive: collapse sidebar on small screens */
+    @media (max-width: 768px) {
+      .oc-sidebar {
+        display: none;
       }
 
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.5;
-        display: flex;
-        flex-direction: column;
-        height: 100dvh;
-        overflow: hidden;
+      .oc-select {
+        min-width: 120px;
       }
+    }
 
-      .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        background: var(--bg-alt);
-        border-bottom: 1px solid var(--border);
-        flex-shrink: 0;
+    /* Horizontal scroll for table on mobile */
+    @media (max-width: 640px) {
+      .oc-table .col-size,
+      .oc-table .col-perm {
+        display: none;
       }
+    }
+  </style>
+</head>
+<body>
+  <!-- OpenClaw shell top bar -->
+  <div class="oc-shell">
+    <div class="oc-shell__nav-section">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <span class="oc-shell__breadcrumb">
+        <span style="color:var(--muted);opacity:0.7;">Plugins</span>
+        <span class="oc-shell__breadcrumb-sep">/</span>
+        <span class="oc-shell__breadcrumb-last">File Browser</span>
+      </span>
+    </div>
+  </div>
 
-      .toolbar h1 {
-        font-size: 1rem;
-        font-weight: 600;
-        white-space: nowrap;
-        margin-right: auto;
-        background: linear-gradient(135deg, var(--accent), #d946ef);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
+  <!-- Main layout: sidebar + content -->
+  <div class="oc-layout">
+    <!-- Left sidebar navigation -->
+    <nav class="oc-sidebar">
+      <div class="oc-sidebar__section">
+        <div class="oc-sidebar__section-label">Navigation</div>
+        <div class="oc-sidebar__item oc-sidebar__item--active" onclick="switchPanel('browse')" id="nav-browse">
+          <span class="oc-sidebar__item-icon">📂</span>
+          <span class="oc-sidebar__item-text">Browse Files</span>
+        </div>
+        <div class="oc-sidebar__item" onclick="switchPanel('recent')" id="nav-recent">
+          <span class="oc-sidebar__item-icon">🕐</span>
+          <span class="oc-sidebar__item-text">Recent Files</span>
+        </div>
+      </div>
 
-      .toolbar-actions {
-        display: flex;
-        gap: 0.4rem;
-      }
+      <div class="oc-sidebar__section">
+        <div class="oc-sidebar__section-label">Roots</div>
+        <div id="sidebar-roots"></div>
+      </div>
 
-      .btn {
-        padding: 0.3rem 0.6rem;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--bg);
-        color: var(--text);
-        cursor: pointer;
-        font-size: 0.813rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        white-space: nowrap;
-        transition: background 0.15s, border-color 0.15s;
-      }
+      <div class="oc-sidebar__spacer"></div>
 
-      .btn:hover { background: var(--bg-hover); }
-      .btn:active { background: #333; }
-      .btn:disabled { opacity: 0.4; cursor: default; }
-      .btn-icon { padding: 0.3rem 0.5rem; }
-      .btn-primary { background: var(--accent-dim); border-color: var(--accent); }
-      .btn-primary:hover { background: var(--accent); }
+      <div class="oc-sidebar__footer">
+        <div class="oc-sidebar__footer-item" onclick="refresh()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="1 1 1 5 5 5"/>
+            <polyline points="15 15 15 11 11 11"/>
+            <polyline points="5 1C3.5 2 1 4 1 8c0 4 4 7 7 7 3 0 5.5-2 6.5-4"/>
+          </svg>
+          Refresh
+        </div>
+        <div class="oc-sidebar__footer-item" onclick="routerReset()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M2 2h12v12H2z"/>
+            <polyline points="6 6 10 10"/>
+          </svg>
+          Clear State
+        </div>
+      </div>
+    </nav>
 
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        flex-wrap: wrap;
-        padding: 0.5rem 1rem;
-        background: var(--bg-alt);
-        border-bottom: 1px solid var(--border);
-        flex-shrink: 0;
-        font-size: 0.813rem;
-      }
+    <!-- Content area -->
+    <div class="oc-content">
+      <!-- Toolbar -->
+      <div class="oc-content__toolbar">
+        <span class="oc-content__toolbar-title">File Browser</span>
+        <div class="oc-content__toolbar-actions">
+          <button class="oc-btn oc-btn--primary" onclick="goUp()" title="Parent directory" id="btn-up">⬆ Parent</button>
+          <button class="oc-btn" onclick="navigateTo('/')" title="Go to root">🏠 Root</button>
+          <button class="oc-btn" onclick="refresh()" title="Refresh">🔄</button>
+        </div>
+      </div>
 
-      .breadcrumb a {
-        color: var(--accent);
-        text-decoration: none;
-        cursor: pointer;
-      }
+      <!-- Root selector (visible when multiple roots) -->
+      <div class="oc-root-selector" id="rootSelector" style="display:none">
+        <label>Root:</label>
+        <select class="oc-select" id="rootSelect" onchange="changeRoot(this.value)"></select>
+      </div>
 
-      .breadcrumb a:hover { text-decoration: underline; }
-      .breadcrumb span.sep { color: var(--text-dim); }
-      .breadcrumb span.current { color: var(--text-muted); }
+      <!-- Breadcrumb -->
+      <div class="oc-breadcrumb" id="breadcrumb"></div>
 
-      .root-selector {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0 1rem 0.5rem;
-        background: var(--bg-alt);
-        flex-shrink: 0;
-      }
+      <!-- Main content -->
+      <div class="oc-main" id="mainArea">
+        <div class="oc-placeholder" id="loading">
+          <div class="oc-placeholder-icon">📂</div>
+          <span>Loading…</span>
+        </div>
+      </div>
 
-      .root-selector select {
-        background: var(--bg);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 0.25rem 0.5rem;
-        font-size: 0.813rem;
-      }
-
-      .main {
-        flex: 1;
-        overflow-y: auto;
-        position: relative;
-      }
-
-      .file-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.875rem;
-      }
-
-      .file-table th {
-        position: sticky;
-        top: 0;
-        background: var(--bg);
-        border-bottom: 2px solid var(--border);
-        padding: 0.5rem 1rem;
-        text-align: left;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-        z-index: 2;
-      }
-
-      .file-table td {
-        padding: 0.375rem 1rem;
-        border-bottom: 1px solid var(--border);
-        vertical-align: middle;
-      }
-
-      .file-table tr:hover td { background: var(--bg-hover); }
-
-      .file-table .name-cell {
-        cursor: pointer;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .file-table .name-cell.dir { color: var(--accent); font-weight: 500; }
-
-      .file-table .icon {
-        font-size: 1.125rem;
-        width: 1.5rem;
-        text-align: center;
-        flex-shrink: 0;
-      }
-
-      .file-table .size { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.75rem; white-space: nowrap; }
-      .file-table .type { color: var(--text-dim); font-size: 0.75rem; }
-      .file-table .perm { color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono); }
-      .file-table .size-col { width: 100px; }
-      .file-table .type-col { width: 100px; }
-      .file-table .perm-col { width: 110px; }
-
-      .viewer {
-        padding: 1rem;
-        overflow: auto;
-        font-family: var(--font-mono);
-        font-size: 0.813rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-        line-height: 1.6;
-        max-height: 100%;
-      }
-
-      .viewer-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1rem;
-        background: var(--bg-alt);
-        border-bottom: 1px solid var(--border);
-        position: sticky;
-        top: 0;
-        z-index: 1;
-      }
-
-      .viewer-header .filename { font-weight: 600; color: var(--accent); font-size: 0.875rem; }
-      .viewer-header .meta { color: var(--text-muted); font-size: 0.75rem; margin-left: auto; }
-
-      .status-bar {
-        padding: 0.4rem 1rem;
-        background: var(--bg-alt);
-        border-top: 1px solid var(--border);
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        display: flex;
-        gap: 1.5rem;
-        flex-shrink: 0;
-      }
-
-      .status-bar span { white-space: nowrap; }
-      .status-bar .enabled { color: var(--success); }
-      .status-bar .disabled { color: var(--danger); }
-
-      .placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 60%;
-        color: var(--text-dim);
-        font-size: 0.938rem;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .placeholder .icon-placeholder { font-size: 2.5rem; opacity: 0.3; }
-
-      .loading-indicator {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        padding: 0.5rem;
-        text-align: center;
-        color: var(--accent);
-        font-size: 0.75rem;
-        background:rgba(0,0,0,0.4);
-        z-index: 5;
-      }
-
-      pre.line-numbers { counter-reset: line; }
-      pre.line-numbers code { display: block; }
-      pre.line-numbers .line::before {
-        counter-increment: line;
-        content: counter(line);
-        display: inline-block;
-        width: 3rem;
-        text-align: right;
-        margin-right: 1rem;
-        color: var(--text-dim);
-        user-select: none;
-      }
-
-      .sort-icon { opacity: 0.3; font-size: 0.7rem; }
-
-      @media (max-width: 640px) {
-        .file-table .size-col,
-        .file-table .perm-col { display: none; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="toolbar">
-      <h1>📁 File Browser</h1>
-      <div class="toolbar-actions">
-        <button class="btn" onclick="goUp()" title="Go up">⬆ Parent</button>
-        <button class="btn btn-icon" onclick="navigateTo('/')" title="Root">🏠</button>
-        <button class="btn" onclick="refresh()" title="Refresh">🔄</button>
+      <!-- Status bar -->
+      <div class="oc-status">
+        <span id="statusEnabled"><span class="oc-status-dot oc-status-dot--ok"></span> Connected</span>
+        <span id="statusRoots"></span>
+        <span id="statusPath"></span>
       </div>
     </div>
+  </div>
 
-    <div class="root-selector" id="rootSelector" style="display:none">
-      <span style="color: var(--text-muted); font-size: 0.813rem;">Root:</span>
-      <select id="rootSelect" onchange="changeRoot(this.value)"></select>
-    </div>
+  <script>
+    // State
+    let currentRoot = null, currentPath = '', currentDirEntries = [], roots = [];
+    let currentView = 'browser', viewingFile = null;
+    let loading = false, sortField = 'name', sortAsc = true;
+    let recentFiles = [];
 
-    <div class="breadcrumb" id="breadcrumb"></div>
+    try {
+      const stored = JSON.parse(localStorage.getItem('oc-filebrowser-recents') || '[]');
+      if (Array.isArray(stored)) recentFiles = stored;
+    } catch (e) {}
 
-    <div class="main" id="mainArea">
-      <div class="placeholder" id="loading">
-        <div class="icon-placeholder">📂</div>
-        <span>Loading…</span>
-      </div>
-    </div>
+    const BASE = window.location.pathname.replace(/\/+$/, '');
 
-    <div class="status-bar">
-      <span id="statusEnabled">⏳ Loading...</span>
-      <span id="statusRoots"></span>
-      <span id="statusPath"></span>
-    </div>
+    // Init
+    fetchStatus();
 
-    <script>
-      // State
-      let currentRoot = null;
-      let currentPath = '';
-      let currentDirEntries = [];
-      let roots = [];
-      let currentView = 'browser'; // 'browser' | 'file'
-      let viewingFile = null;
-      let loading = false;
-      let sortField = 'name';
-      let sortAsc = true;
+    function fetchStatus() {
+      fetch(`${BASE}/api/status`, { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          roots = data.roots || [];
+          document.getElementById('statusRoots').textContent = roots.length + ' root(s)';
 
-      // Auto-extract base for API calls
-      const BASE = window.location.pathname.replace(/\/+$/, '');
-
-      // Init
-      fetchStatus();
-
-      function fetchStatus() {
-        fetch(`${BASE}/api/status`, { credentials: 'include' })
-          .then(r => r.json())
-          .then(data => {
-            const s = data.result || data;
-            document.getElementById('statusEnabled').innerHTML = s.enabled
-              ? '<span class="enabled">● Enabled</span>'
-              : '<span class="disabled">● Disabled</span>';
-
-            roots = s.roots || [];
-            document.getElementById('statusRoots').textContent = roots.length + ' root(s)';
-
-            if (roots.length === 0) {
-              document.getElementById('mainArea').innerHTML =
-                '<div class="placeholder"><div class="icon-placeholder">⚠️</div><span>No roots configured. Add <code>roots</code> to the plugin config.</span></div>';
-              return;
-            }
-
-            if (roots.length === 1) {
-              currentRoot = roots[0];
-              document.getElementById('rootSelector').style.display = 'none';
-            } else {
-              const sel = document.getElementById('rootSelect');
-              sel.innerHTML = roots.map((r, i) =>
-                `<option value="${i}">${escapeHtml(r)}</option>`
-              ).join('');
-              document.getElementById('rootSelector').style.display = 'flex';
-              if (!currentRoot) currentRoot = roots[0];
-            }
-
-            navigateTo('/');
-          })
-          .catch(err => {
+          if (roots.length === 0) {
             document.getElementById('mainArea').innerHTML =
-              '<div class="placeholder"><div class="icon-placeholder">❌</div><span>Failed to connect: ' + escapeHtml(String(err)) + '</span></div>';
-          });
-      }
-
-      function escapeHtml(str) {
-        const d = document.createElement('div');
-        d.textContent = str;
-        return d.innerHTML;
-      }
-
-      // HTTP API wrappers (paths relative to BASE)
-      function apiList(root, dirPath) {
-        const p = encodeURIComponent(root || '');
-        const d = encodeURIComponent(dirPath || '.');
-        return fetch(`${BASE}/api/list?root=${p}&path=${d}`, { credentials: 'include' })
-          .then(r => r.json());
-      }
-      function apiRead(root, filePath) {
-        const p = encodeURIComponent(root || '');
-        const f = encodeURIComponent(filePath || '.');
-        return fetch(`${BASE}/api/read?root=${p}&path=${f}`, { credentials: 'include' })
-          .then(r => r.json());
-      }
-
-      function navigateTo(dirPath) {
-        if (!currentRoot) return;
-        currentPath = dirPath || '/';
-        currentView = 'browser';
-        loadDirectory(dirPath);
-      }
-
-      function goUp() {
-        if (!currentPath || currentPath === '/' || currentPath === '') return;
-        const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
-        navigateTo(parent);
-      }
-
-      function loadDirectory(dirPath) {
-        if (!currentRoot) return;
-        setLoading(true);
-        currentPath = dirPath || '/';
-
-        apiList(currentRoot, dirPath || '.').then(data => {
-          const result = data.result || data;
-          if (data.error) {
-            showError(String(data.error.message || data.error));
+              '<div class="oc-placeholder"><div class="oc-placeholder-icon">⚠️</div><span>No roots configured. Add <code>roots</code> to plugin config.</span></div>';
             return;
           }
-          currentDirEntries = (result.entries || []).sort(defaultSort);
-          renderDirectory(result.root || currentRoot, result.path || currentPath);
-          updateBreadcrumb(currentPath);
-        }).catch(err => {
-          showError(String(err));
-        }).finally(() => setLoading(false));
-      }
 
-      function defaultSort(a, b) {
-        const dirsFirst = (b.type === 'directory' ? 1 : 0) - (a.type === 'directory' ? 1 : 0);
-        return dirsFirst || a.name.localeCompare(b.name);
-      }
-
-      function renderDirectory(root, dirPath) {
-        setLoading(false);
-        const main = document.getElementById('mainArea');
-        if (!currentDirEntries.length) {
-          main.innerHTML =
-            '<div class="placeholder"><div class="icon-placeholder">📭</div><span>This directory is empty</span></div>';
-          updateBreadcrumb(currentPath);
-          return;
-        }
-
-        const rows = currentDirEntries.map(entry => {
-          const isDir = entry.type === 'directory';
-          const isFile = entry.type === 'file';
-          const icon = isDir ? '📁' : isFile ? '📄' : '❓';
-          const cls = isDir ? 'dir' : '';
-          const displaySize = isFile ? formatSize(entry.size || 0) : '—';
-          const fileType = isDir ? 'directory' : getFileType(entry.name);
-          const encoded = encodeURIComponent(entry.name);
-
-          return `
-            <tr>
-              <td>
-                <span class="name-cell ${cls}" onclick="enterEntry('${escapeHtml(entry.name)}', '${isDir}')">
-                  <span class="icon">${icon}</span>
-                  <span>${escapeHtml(entry.name)}</span>
-                </span>
-              </td>
-              <td class="size-col size">${escapeHtml(displaySize)}</td>
-              <td class="type-col type">${escapeHtml(fileType)}</td>
-              <td class="perm-col perm">${entry.permissions || '———'}</td>
-            </tr>`;
-        }).join('');
-
-        main.innerHTML = `
-          <table class="file-table">
-            <thead>
-              <tr>
-                <th onclick="toggleSort('name')">Name <span class="sort-icon">${sortField === 'name' ? (sortAsc ? '▲' : '▼') : '⇅'}</span></th>
-                <th class="size-col" onclick="toggleSort('size')">Size <span class="sort-icon">${sortField === 'size' ? (sortAsc ? '▲' : '▼') : '⇅'}</span></th>
-                <th class="type-col" onclick="toggleSort('type')">Type <span class="sort-icon">${sortField === 'type' ? (sortAsc ? '▲' : '▼') : '⇅'}</span></th>
-                <th class="perm-col">Perms</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>`;
-      }
-
-      function enterEntry(name, isDir) {
-        const nextPath = currentPath === '/'
-          ? '/' + name
-          : (currentPath || '') + '/' + name;
-
-        if (isDir) {
-          navigateTo(nextPath);
-        } else {
-          previewFile(name, nextPath);
-        }
-      }
-
-      function previewFile(name, filePath) {
-        setLoading(true);
-        currentView = 'file';
-        viewingFile = { name, path: filePath };
-
-        apiRead(currentRoot, filePath).then(data => {
-          setLoading(false);
-          if (data.error) {
-            showError(String(data.error.message || data.error));
-            return;
-          }
-          const result = data.result || data;
-          const content = result.content || '';
-          renderFilePreview(result.root || currentRoot, filePath, content, result.bytes || 0);
-        }).catch(err => {
-          setLoading(false);
-          showError(String(err));
-        });
-      }
-
-      function renderFilePreview(root, filePath, content, byteCount) {
-        const main = document.getElementById('mainArea');
-        const fileName = filePath.split('/').pop();
-        const lines = content.split('\n');
-        const numbered = lines.map((line, i) =>
-          `<span class="line">${escapeHtml(line)}</span>\n`
-        ).join('');
-
-        main.innerHTML = `
-          <div class="viewer-header">
-            <span style="cursor:pointer" onclick="navigateTo('${currentPath.split('/').slice(0, -1).join('/') || '/'}')">← Back</span>
-            <span class="filename">📄 ${escapeHtml(fileName)}</span>
-            <span class="meta">${formatSize(byteCount)} · ${lines.length} line${lines.length !== 1 ? 's' : ''}</span>
-          </div>
-          <pre class="viewer"><code class="line-numbers">${numbered}</code></pre>`;
-
-        updateBreadcrumb(filePath);
-      }
-
-      function showError(msg) {
-        document.getElementById('mainArea').innerHTML =
-          `<div class="placeholder"><div class="icon-placeholder">⚠️</div><span>${escapeHtml(msg)}</span></div>`;
-      }
-
-      function refresh() {
-        if (currentView === 'file' && viewingFile) {
-          previewFile(viewingFile.name, viewingFile.path);
-        } else {
-          loadDirectory(currentPath);
-        }
-      }
-
-      function setLoading(flag) {
-        loading = flag || false;
-        const el = document.getElementById('loading');
-        if (flag) {
-          el.style.display = 'block';
-          el.innerHTML = '<div class="loading-indicator">⏳ Loading…</div>';
-        } else {
-          el.style.display = 'none';
-        }
-      }
-
-      function changeRoot(idx) {
-        currentRoot = roots[parseInt(idx)] || roots[0];
-        navigateTo('/');
-      }
-
-      function updateBreadcrumb(filePath) {
-        const bc = document.getElementById('breadcrumb');
-        let items;
-        if (filePath === '/' || filePath === '') {
-          bc.innerHTML = '<span class="current">/</span>';
-          document.getElementById('statusPath').textContent = '/';
-          return;
-        }
-        const parts = filePath.split('/').filter(Boolean);
-        let cumPath = '';
-        let html = `<a onclick="navigateTo('/')">🏠</a>`;
-        parts.forEach((p, i) => {
-          cumPath += '/' + p;
-          html += ' <span class="sep">/</span> ';
-          if (i === parts.length - 1) {
-            html += `<span class="current">${escapeHtml(p)}</span>`;
+          if (roots.length === 1) {
+            currentRoot = roots[0];
+            document.getElementById('rootSelector').style.display = 'none';
           } else {
-            html += `<a onclick="navigateTo('${escapeHtml(cumPath)}')">${escapeHtml(p)}</a>`;
+            const sel = document.getElementById('rootSelect');
+            sel.innerHTML = roots.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+            document.getElementById('rootSelector').style.display = 'flex';
+            if (!currentRoot) currentRoot = roots[0];
           }
+
+          // Populate sidebar roots
+          document.getElementById('sidebar-roots').innerHTML = roots.map(r =>
+            `<div class="oc-sidebar__item${currentRoot === r ? ' oc-sidebar__item--active' : ''}" onclick="selectRoot('${escapeHtml(r)}')">
+              <span class="oc-sidebar__item-icon">📁</span>
+              <span class="oc-sidebar__item-text">${escapeHtml(r)}</span>
+            </div>`
+          ).join('');
+
+          navigateTo('/');
+        })
+        .catch(err => {
+          document.getElementById('statusEnabled').innerHTML =
+            '<span class="oc-status-dot oc-status-dot--err"></span> Error';
+          document.getElementById('mainArea').innerHTML =
+            '<div class="oc-placeholder"><div class="oc-placeholder-icon">❌</div><span>Failed: ' + escapeHtml(String(err)) + '</span></div>';
         });
-        bc.innerHTML = html;
-        document.getElementById('statusPath').textContent = filePath;
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = String(str);
+      return d.innerHTML;
+    }
+
+    function apiList(root, path) {
+      const relPath = (path || '.').replace(/^\//, '') || '.';
+      return fetch(`${BASE}/api/list?root=${encodeURIComponent(root||'')}&path=${encodeURIComponent(relPath)}`, { credentials: 'include' }).then(r => r.json());
+    }
+    function apiRead(root, path) {
+      const relPath = (path || '.').replace(/^\//, '') || '.';
+      return fetch(`${BASE}/api/read?root=${encodeURIComponent(root||'')}&path=${encodeURIComponent(relPath)}`, { credentials: 'include' }).then(r => r.json());
+    }
+
+    function navigateTo(dirPath) {
+      if (!currentRoot) return;
+      currentPath = dirPath || '/';
+      currentView = 'browser';
+      loadDirectory();
+    }
+
+    function goUp() {
+      if (!currentPath || currentPath === '/') return;
+      const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
+      navigateTo(parent);
+    }
+
+    function loadDirectory() {
+      if (!currentRoot) return;
+      setLoading(true);
+      apiList(currentRoot, currentPath).then(data => {
+        if (data.error) { showError(String(data.error.message || data.error)); return; }
+        currentDirEntries = (data.entries || []).sort(defaultSort);
+        renderDirectory(data.root || currentRoot, data.path || currentPath);
+        updateBreadcrumb(currentPath);
+      }).catch(err => {
+        showError(String(err));
+      }).finally(() => setLoading(false));
+    }
+
+    function defaultSort(a, b) {
+      return ((b.type === 'directory' ? 1 : 0) - (a.type === 'directory' ? 1 : 0)) || a.name.localeCompare(b.name);
+    }
+
+    function renderDirectory(root, dirPath) {
+      const main = document.getElementById('mainArea');
+      if (!currentDirEntries.length) {
+        main.innerHTML = '<div class="oc-placeholder"><div class="oc-placeholder-icon">📭</div><span>This directory is empty</span></div>';
+        updateBreadcrumb(currentPath);
+        return;
       }
 
-      function toggleSort(field) {
-        if (sortField === field) {
-          sortAsc = !sortAsc;
-        } else {
-          sortField = field;
-          sortAsc = true;
-        }
-        const mult = sortAsc ? 1 : -1;
-        currentDirEntries.sort((a, b) => {
-          if (field === 'name') return mult * a.name.localeCompare(b.name);
-          if (field === 'size') return mult * ((a.size || 0) - (b.size || 0));
-          if (field === 'type') return mult * getFileType(a.name).localeCompare(getFileType(b.name));
-          return 0;
-        });
-        renderDirectory(currentRoot, currentPath);
-      }
+      const rows = currentDirEntries.map(entry => {
+        const isDir = entry.type === 'directory';
+        const icon = isDir ? '📁' : (entry.type === 'file' ? '📄' : '❓');
+        const displaySize = entry.type === 'file' ? formatSize(entry.size || 0) : '—';
+        const fileType = isDir ? 'directory' : getFileType(entry.name);
 
-      function formatSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-        return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
-      }
+        return `<tr>
+          <td class="col-name ${isDir ? 'col-dir' : ''}" onclick="enterEntry('${escapeHtml(entry.name)}', ${isDir})" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
+            <span class="col-icon">${icon}</span>
+            <span>${escapeHtml(entry.name)}</span>
+          </td>
+          <td class="col-size">${escapeHtml(displaySize)}</td>
+          <td class="col-type">${escapeHtml(fileType)}</td>
+          <td class="col-perm">${entry.permissions || '———'}</td>
+        </tr>`;
+      }).join('');
 
-      function getFileType(name) {
-        const ext = ((name || '').split('.').pop() || '').toLowerCase();
-        const map = {
-          js: 'JavaScript', ts: 'TypeScript', jsx: 'JSX', tsx: 'TSX', json: 'JSON',
-          css: 'CSS', html: 'HTML', htm: 'HTML', xml: 'XML', svg: 'SVG',
-          md: 'Markdown', txt: 'Text', log: 'Log', yml: 'YAML', yaml: 'YAML',
-          toml: 'TOML', ini: 'INI', cfg: 'Config', py: 'Python', rb: 'Ruby',
-          rs: 'Rust', go: 'Go', java: 'Java', c: 'C', cpp: 'C++', h: 'Header',
-          sh: 'Shell', bash: 'Bash', sql: 'SQL', graphql: 'GraphQL', gql: 'GraphQL',
-          png: 'PNG img', jpg: 'JPEG img', jpeg: 'JPEG img', gif: 'GIF img',
-          webp: 'WebP img', ico: 'ICO', pdf: 'PDF doc', docx: 'Word doc',
-          env: 'Env', lock: 'Lock', gitignore: 'Git', dockerfile: 'Docker',
-          csv: 'CSV', proto: 'Protobuf',
-        };
-        return map[ext] || ext.toUpperCase();
-      }
+      main.innerHTML = `<div class="oc-table-wrap">
+        <table class="oc-table">
+          <thead>
+            <tr>
+              <th class="sortable" onclick="toggleSort('name')">Name <span style="opacity:0.5;font-size:10px;">${sortField==='name' ? (sortAsc ? '▲' : '▼') : '▼'}</span></th>
+              <th class="sortable col-size" onclick="toggleSort('size')">Size <span style="opacity:0.5;font-size:10px;">${sortField==='size' ? (sortAsc ? '▲' : '▼') : '▼'}</span></th>
+              <th class="sortable col-type" onclick="toggleSort('type')">Type <span style="opacity:0.5;font-size:10px;">${sortField==='type' ? (sortAsc ? '▲' : '▼') : '▼'}</span></th>
+              <th class="col-perm">Perms</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table></div>`;
+    }
 
-      function getCookie(name) {
-        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-        return match ? match[2] : null;
+    function enterEntry(name, isDir) {
+      const nextPath = currentPath === '/' ? '/' + name : (currentPath || '') + '/' + name;
+      if (isDir) {
+        navigateTo(nextPath);
+      } else {
+        previewFile(name, nextPath);
       }
+    }
 
-      fetchStatus();
-    </script>
-  </body>
+    function previewFile(name, filePath) {
+      if (!currentRoot) return;
+      setLoading(true);
+      currentView = 'file';
+      viewingFile = { name, path: filePath };
+
+      // Add to recent files
+      recentFiles = recentFiles.filter(f => f.path !== filePath);
+      recentFiles.unshift({ name, path: filePath, root: currentRoot });
+      recentFiles = recentFiles.slice(0, 50);
+      try { localStorage.setItem('oc-filebrowser-recents', JSON.stringify(recentFiles)); } catch(e) {}
+
+      apiRead(currentRoot, filePath).then(data => {
+        if (data.error) { showError(String(data.error.message || data.error)); return; }
+        const content = data.content || '';
+        renderFileViewer(data.root || currentRoot, filePath, content, data.bytes || 0);
+        updateBreadcrumb(filePath);
+      }).catch(err => {
+        showError(String(err));
+      }).finally(() => setLoading(false));
+    }
+
+    function renderFileViewer(root, filePath, content, byteCount) {
+      const main = document.getElementById('mainArea');
+      const fileName = filePath.split('/').pop();
+      const lines = content.split('\n');
+      const numbered = lines.map(line => `<span class="line">${escapeHtml(line)}</span>\n`).join('');
+
+      main.innerHTML = `
+        <div class="oc-viewer-header">
+          <span class="oc-viewer-back" onclick="navigateTo('${currentPath.split('/').slice(0,-1).join('/') || '/'}')">← Back</span>
+          <span class="oc-viewer-filename">${escapeHtml(fileName)}</span>
+          <span class="oc-viewer-meta">${formatSize(byteCount)} · ${lines.length} line${lines.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="oc-viewer">
+          <pre><code class="line-numbers">${numbered}</code></pre>
+        </div>`;
+    }
+
+    function showError(msg) {
+      document.getElementById('mainArea').innerHTML =
+        `<div class="oc-placeholder"><div class="oc-placeholder-icon">⚠️</div><span>${escapeHtml(msg)}</span></div>`;
+    }
+
+    function refresh() {
+      setLoading(true);
+      if (currentView === 'file' && viewingFile) {
+        apiRead(currentRoot, viewingFile.path).then(data => {
+          if (!data.error) renderFileViewer(currentRoot, viewingFile.path, data.content || '', data.bytes || 0);
+        }).finally(() => setLoading(false));
+      } else {
+        navigateTo(currentPath);
+      }
+    }
+
+    function setLoading(flag) {
+      loading = flag || false;
+    }
+
+    function selectRoot(root) {
+      currentRoot = root;
+      navigateTo('/');
+      document.querySelectorAll('.oc-sidebar__item').forEach(el => el.classList.remove('oc-sidebar__item--active'));
+    }
+
+    function changeRoot(idx) {
+      currentRoot = roots[parseInt(idx)] || roots[0];
+      navigateTo('/');
+    }
+
+    function updateBreadcrumb(filePath) {
+      const bc = document.getElementById('breadcrumb');
+      const parts = filePath.split('/').filter(Boolean);
+      if (parts.length === 0) {
+        bc.innerHTML = '<span class="oc-breadcrumb-current">/</span>';
+      } else {
+        bc.innerHTML = parts.map((p, i) => {
+          let cumPath = '/' + parts.slice(0, i + 1).join('/');
+          let isLast = i === parts.length - 1;
+          return isLast
+            ? `<span class="oc-breadcrumb-current">${escapeHtml(p)}</span>`
+            : `<a onclick="navigateTo('${escapeHtml(cumPath)}')">${escapeHtml(p)}</a><span class="oc-breadcrumb-sep">/</span>`;
+        }).join('');
+      }
+      document.getElementById('statusPath').textContent = filePath || '/';
+    }
+
+    function switchPanel(panel) {
+      document.getElementById('nav-browse').classList.toggle('oc-sidebar__item--active', panel === 'browse');
+      document.getElementById('nav-recent').classList.toggle('oc-sidebar__item--active', panel === 'recent');
+      if (panel === 'recent') {
+        renderRecentFiles();
+      } else {
+        navigateTo(currentPath);
+      }
+    }
+
+    function renderRecentFiles() {
+      const main = document.getElementById('mainArea');
+      main.innerHTML = '<div class="oc-viewer-header"><span style="color:var(--muted);font-size:13px;">Recent Files</span></div>' +
+        '<div class="oc-table-wrap"><table class="oc-table"><thead><tr><th>Name</th><th>Root</th><th style="width:100px;">&nbsp;</th></tr></thead><tbody>' +
+        recentFiles.map(f =>
+          `<tr>
+            <td onclick="recentFileClick('${escapeHtml(f.root)}', '${escapeHtml(f.path)}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;">
+              <span class="col-icon">📄</span>
+              <span>${escapeHtml(f.path)}</span>
+            </td>
+            <td style="color:var(--muted);font-size:12px;">${escapeHtml(f.root)}</td>
+            <td><button class="oc-btn" onclick="event.stopPropagation();recentFileClick('${escapeHtml(f.root)}', '${escapeHtml(f.path)}')">Open</button></td>
+          </tr>`
+        ).join('') + '</tbody></table></div>';
+      document.getElementById('breadcrumb').innerHTML = '<span class="oc-breadcrumb-current">Recent Files</span>';
+    }
+
+    function recentFileClick(root, path) {
+      currentRoot = root;
+      currentPath = path.split('/').slice(0, -1).join('/') || '/';
+      const name = path.split('/').pop();
+      viewingFile = { name, path };
+      currentView = 'file';
+      setLoading(true);
+      apiRead(root, path).then(data => {
+        if (data.error) { showError(String(data.error.message || data.error)); return; }
+        renderFileViewer(root, path, data.content || '', data.bytes || 0);
+        updateBreadcrumb(path);
+        document.getElementById('nav-browse').classList.remove('oc-sidebar__item--active');
+        document.getElementById('nav-recent').classList.add('oc-sidebar__item--active');
+      }).catch(err => showError(String(err))).finally(() => setLoading(false));
+    }
+
+    function routerReset() {
+      recentFiles = [];
+      try { localStorage.removeItem('oc-filebrowser-recents'); } catch(e) {}
+      toast('Recent files cleared');
+    }
+
+    function toast(msg) {
+      const el = document.createElement('div');
+      el.className = 'oc-toast';
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    function toggleSort(field) {
+      sortAsc = sortField === field ? !sortAsc : true;
+      sortField = field;
+      const mult = sortAsc ? 1 : -1;
+      currentDirEntries.sort((a, b) => {
+        if (field === 'name') return mult * a.name.localeCompare(b.name);
+        if (field === 'size') return mult * ((a.size || 0) - (b.size || 0));
+        if (field === 'type') return mult * getFileType(a.name).localeCompare(getFileType(b.name));
+        return 0;
+      });
+      renderDirectory(currentRoot, currentPath);
+    }
+
+    function formatSize(bytes) {
+      if (!bytes || bytes <= 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+      return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    function getFileType(name) {
+      const ext = ((name || '').split('.').pop() || '').toLowerCase();
+      const map = {
+        js:'JavaScript', ts:'TypeScript', jsx:'JSX', tsx:'TSX', json:'JSON',
+        css:'CSS', html:'HTML', htm:'HTML', xml:'XML', svg:'SVG',
+        md:'Markdown', txt:'Text', log:'Log', yml:'YAML', yaml:'YAML',
+        toml:'TOML', ini:'INI', cfg:'Config', py:'Python', rb:'Ruby',
+        rs:'Rust', go:'Go', java:'Java', c:'C', cpp:'C++', h:'Header',
+        sh:'Shell', bash:'Bash', sql:'SQL', graphql:'GraphQL', gql:'GraphQL',
+        png:'PNG img', jpg:'JPEG img', jpeg:'JPEG img', gif:'GIF img',
+        webp:'WebP img', ico:'ICO', pdf:'PDF doc', docx:'Word doc',
+        env:'Env', lock:'Lock', gitignore:'Git', dockerfile:'Docker',
+        csv:'CSV', proto:'Protobuf',
+      };
+      return map[ext] || ext.toUpperCase();
+    }
+  </script>
+</body>
 </html>

@@ -38,7 +38,8 @@ assert.ok(
     (descriptor) =>
       descriptor?.pluginId === "openclaw-filebrowser" &&
       descriptor?.id === "openclaw-filebrowser-settings" &&
-      descriptor?.surface === "settings"
+      descriptor?.surface === "tool" &&
+      descriptor?.path === "/plugin/openclaw-filebrowser"
   )
 );
 

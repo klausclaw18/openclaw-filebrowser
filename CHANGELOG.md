@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.1.1] - 2026-05-31
+
+### Fixed
+
+- Made the plugin reachable from Control UI navigation under the `Control` section
+- Switched plugin HTTP routes to browser-compatible plugin auth so `/plugin/openclaw-filebrowser` loads inside Control UI
+- Fixed SPA path handling so browsing nested workspace paths no longer submits invalid absolute paths
+- Corrected breadcrumb rendering for root and nested directory navigation
+
 ## [1.1.0] - 2026-05-31
 
 ### Added
@@ -36,4 +45,3 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 - Enforced root-bound path resolution
 - Realpath validation to prevent symlink escapes
 - Rejection of non-UTF-8 and oversized text file reads
-

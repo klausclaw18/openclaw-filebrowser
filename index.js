@@ -67,7 +67,7 @@ function isUtf8Text(buffer) {
   return !decoded.includes("\u0000") && Buffer.from(decoded, "utf8").equals(buffer);
 }
 
-const fileBrowserConfigSchema = Type.Object(
+const fileBrowserPluginConfigSchema = Type.Object(
   {
     enabled: Type.Optional(Type.Boolean()),
     roots: Type.Optional(Type.Array(Type.String())),
@@ -108,7 +108,7 @@ function getRootAndCandidate(params, config) {
   return { rootPath, candidatePath };
 }
 
-// ---------- EMBEDDED UI HTML ----------
+// ---------- EMBEDDED UI HTML PATH ----------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UI_HTML_PATH = path.resolve(__dirname, "filebrowser-ui.html");
@@ -117,21 +117,23 @@ const UI_HTML_PATH = path.resolve(__dirname, "filebrowser-ui.html");
 export default definePluginEntry({
   id: "openclaw-filebrowser",
   name: "OpenClaw File Browser",
-  description: "Read-only file browser with interactive Control UI dashboard.",
-  configSchema: fileBrowserConfigSchema,
+  description: "Read-only file browser with interactive web UI.",
+  configSchema: fileBrowserPluginConfigSchema,
   register(api) {
     const config = normalizeConfig(api.pluginConfig);
 
-    // Control UI descriptor — settings-surface placeholder
-    api.session.controls.registerControlUiDescriptor({
+    // Control UI descriptor — exposes the browser inside Control UI navigation.
+    api.registerControlUiDescriptor({
       id: "openclaw-filebrowser-settings",
-      surface: "settings",
+      surface: "tool",
       label: "File Browser",
-      description: "Read-only file browser status and configured roots.",
+      icon: "folder",
+      path: "/plugin/openclaw-filebrowser",
+      description: "Browse files and directories on the configured roots.",
       requiredScopes: ["operator.read"]
     });
 
-    // Gateway RPC — internal agent methods (unchanged)
+    // Gateway RPC — internal agent methods
     api.registerGatewayMethod(
       "filebrowser.status",
       ({ respond }) => {
@@ -246,27 +248,30 @@ export default definePluginEntry({
       { scope: "operator.read" }
     );
 
-    // HTTP API routes for the interactive SPA
-    function serveJson(res, statusCode, data) {
-      const body = JSON.stringify(data);
+    // ===== HTTP routes for the interactive SPA =====
+    // Use auth: "plugin" so the browser-authenticated Control UI can access these URLs.
+    // auth: "gateway" requires the gateway's own token which browser HTTP requests cannot supply.
+
+    function send(res, statusCode, body, contentType) {
       res.statusCode = statusCode;
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      if (contentType) res.setHeader("Content-Type", contentType);
       res.end(body);
     }
 
     // /api/status
     api.registerHttpRoute({
       path: "/plugin/openclaw-filebrowser/api/status",
-      auth: "gateway",
+      auth: "plugin",
       match: "exact",
       handler: (_req, res) => {
-        serveJson(res, 200, {
+        const payload = JSON.stringify({
           pluginId: "openclaw-filebrowser",
           enabled: config.enabled,
           roots: config.roots,
           maxTextBytes: config.maxTextBytes,
           capabilities: ["status", "listDirectory", "readFile"]
         });
+        send(res, 200, payload, "application/json; charset=utf-8");
         return true;
       }
     });
@@ -274,29 +279,29 @@ export default definePluginEntry({
     // /api/list?root=<path>&path=<dir>
     api.registerHttpRoute({
       path: "/plugin/openclaw-filebrowser/api/list",
-      auth: "gateway",
+      auth: "plugin",
       match: "exact",
       handler: async (req, res) => {
         const url = new URL(req.url, "http://localhost");
         const rootParam = url.searchParams.get("root") || config.roots[0];
         const dirParam = url.searchParams.get("path") || ".";
-        const rootPath = selectConfiguredRoot(config.roots, rootParam);
 
+        const rootPath = selectConfiguredRoot(config.roots, rootParam);
         if (!rootPath) {
-          serveJson(res, 400, { error: "Invalid root" });
+          send(res, 400, JSON.stringify({ error: "Invalid root" }), "application/json; charset=utf-8");
           return true;
         }
 
         const candidatePath = resolveRelativePathWithinRoot(rootPath, dirParam);
         if (!candidatePath) {
-          serveJson(res, 400, { error: "Path must stay within the configured root" });
+          send(res, 400, JSON.stringify({ error: "Path must stay within the configured root" }), "application/json; charset=utf-8");
           return true;
         }
 
         try {
           const realCandidate = await realpathWithinRoot(rootPath, candidatePath);
           if (!realCandidate) {
-            serveJson(res, 403, { error: "Path escapes the selected root" });
+            send(res, 403, JSON.stringify({ error: "Path escapes the selected root" }), "application/json; charset=utf-8");
             return true;
           }
 
@@ -316,13 +321,13 @@ export default definePluginEntry({
             };
           }));
 
-          serveJson(res, 200, {
+          send(res, 200, JSON.stringify({
             root: rootPath,
             path: dirParam,
             entries: dirEntries
-          });
+          }), "application/json; charset=utf-8");
         } catch (err) {
-          serveJson(res, 500, { error: err.message });
+          send(res, 500, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");
         }
         return true;
       }
@@ -331,67 +336,67 @@ export default definePluginEntry({
     // /api/read?root=<path>&path=<file>
     api.registerHttpRoute({
       path: "/plugin/openclaw-filebrowser/api/read",
-      auth: "gateway",
+      auth: "plugin",
       match: "exact",
       handler: async (req, res) => {
         const url = new URL(req.url, "http://localhost");
         const rootParam = url.searchParams.get("root") || config.roots[0];
         const fileParam = url.searchParams.get("path") || ".";
-        const rootPath = selectConfiguredRoot(config.roots, rootParam);
 
+        const rootPath = selectConfiguredRoot(config.roots, rootParam);
         if (!rootPath) {
-          serveJson(res, 400, { error: "Invalid root" });
+          send(res, 400, JSON.stringify({ error: "Invalid root" }), "application/json; charset=utf-8");
           return true;
         }
 
         const candidatePath = resolveRelativePathWithinRoot(rootPath, fileParam);
         if (!candidatePath) {
-          serveJson(res, 400, { error: "Path must stay within the configured root" });
+          send(res, 400, JSON.stringify({ error: "Path must stay within the configured root" }), "application/json; charset=utf-8");
           return true;
         }
 
         try {
           const realCandidate = await realpathWithinRoot(rootPath, candidatePath);
           if (!realCandidate) {
-            serveJson(res, 403, { error: "Path escapes the selected root" });
+            send(res, 403, JSON.stringify({ error: "Path escapes the selected root" }), "application/json; charset=utf-8");
             return true;
           }
 
           const stat = await fs.stat(realCandidate);
           if (!stat.isFile()) {
-            serveJson(res, 400, { error: "Path must refer to a file" });
+            send(res, 400, JSON.stringify({ error: "Path must refer to a file" }), "application/json; charset=utf-8");
             return true;
           }
 
           if (stat.size > config.maxTextBytes) {
-            serveJson(res, 413, { error: "File exceeds configured read limit" });
+            send(res, 413, JSON.stringify({ error: "File exceeds configured read limit" }), "application/json; charset=utf-8");
             return true;
           }
 
           const buffer = await fs.readFile(realCandidate);
           if (!isUtf8Text(buffer)) {
-            serveJson(res, 400, { error: "File is not valid UTF-8 text" });
+            send(res, 400, JSON.stringify({ error: "File is not valid UTF-8 text" }), "application/json; charset=utf-8");
             return true;
           }
 
-          serveJson(res, 200, {
+          send(res, 200, JSON.stringify({
             root: rootPath,
             path: fileParam,
             bytes: buffer.length,
             content: buffer.toString("utf8")
-          });
+          }), "application/json; charset=utf-8");
         } catch (err) {
-          serveJson(res, 500, { error: err.message });
+          send(res, 500, JSON.stringify({ error: err.message }), "application/json; charset=utf-8");
         }
         return true;
       }
     });
 
-    // Serves the interactive HTML file browser SPA
+    // Serves the interactive HTML file browser SPA at /plugin/openclaw-filebrowser
     let cachedUi = null;
     api.registerHttpRoute({
       path: "/plugin/openclaw-filebrowser",
-      auth: "gateway",
+      auth: "plugin",
       match: "exact",
       handler: async (_req, res) => {
         try {
@@ -403,12 +408,12 @@ export default definePluginEntry({
           res.setHeader("Cache-Control", "public, max-age=3600");
           res.end(cachedUi);
         } catch (_) {
-          // Fallback on read error
+          // Fallback if HTML file cannot be read
           res.statusCode = 200;
           res.setHeader("Content-Type", "text/html; charset=utf-8");
           res.end(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/><title>OpenClaw File Browser</title></head>
-<body><h1>📁 File Browser</h1><p>Enabled: ${config.enabled}</p><p>Roots: ${config.roots.length}</p></body></html>`);
+<body><h1>&#x1F4C1; File Browser</h1><p>Enabled: ${config.enabled}</p><p>Roots: ${config.roots.length}</p></body></html>`);
         }
         return true;
       }
